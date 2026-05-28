@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # Data
     dataset_name: str = "ManikaSaini/zomato-restaurant-recommendation"
-    auto_refresh_cache: bool = False
+    auto_refresh_cache: bool = True
     cache_dir: Path = CACHE_DIR
     restaurants_parquet: Path = RESTAURANTS_PARQUET
     cache_metadata_path: Path = CACHE_METADATA_JSON
