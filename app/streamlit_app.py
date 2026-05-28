@@ -74,7 +74,15 @@ def main() -> None:
         "The AI ranks from a filtered candidate set so output stays grounded in real data."
     )
 
-    repository = get_cached_repository()
+    try:
+        repository = get_cached_repository()
+    except Exception as exc:
+        st.error(
+            "The restaurant cache could not be loaded. Please ensure `data/cache/restaurants.parquet` exists, or enable AUTO_REFRESH_CACHE in Streamlit secrets."
+        )
+        st.write("If you are on Streamlit Cloud, check the app logs for the full ingest error.")
+        return
+
     if repository is None:
         return
 
