@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  zomato-app:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ./data/cache:/app/data/cache
+    restart: unless-stopped
