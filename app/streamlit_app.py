@@ -15,19 +15,20 @@ from data.loader import ingest
 from app.logging_config import configure_logging
 
 
-def load_repository() -> RestaurantRepository:
+def load_repository() -> RestaurantRepository | None:
     repo = RestaurantRepository()
     try:
         repo.load()
         return repo
     except FileNotFoundError:
         settings = get_settings()
-        # If configured to auto-refresh, attempt to download and build the cache
-        if settings.auto_refresh_cache or os.environ.get("AUTO_REFRESH_CACHE", "").lower() in (
+        should_refresh = settings.auto_refresh_cache or os.environ.get("AUTO_REFRESH_CACHE", "").lower() in (
             "1",
             "true",
             "yes",
-        ):
+        )
+
+        if should_refresh:
             st.warning(
                 "Restaurant cache not found. Downloading dataset and building cache (this may take several minutes)..."
             )
@@ -35,18 +36,18 @@ def load_repository() -> RestaurantRepository:
                 ingest(refresh=True)
                 repo.load()
                 return repo
-            except Exception as exc:  # re-raise with a helpful message
+            except Exception:
                 st.error("Automatic dataset ingest failed. Check app logs for details.")
-                raise
-        # Otherwise, instruct the user to run ingestion manually
+                return None
+
         st.error(
-            "Restaurant cache not found. Run `python -m data.loader --refresh` locally or enable AUTO_REFRESH_CACHE."
+            "Restaurant cache not found. Run `python -m data.loader --refresh` locally or set AUTO_REFRESH_CACHE=true in Streamlit secrets."
         )
-        raise
+        return None
 
 
 @st.cache_resource
-def get_cached_repository() -> RestaurantRepository:
+def get_cached_repository() -> RestaurantRepository | None:
     return load_repository()
 
 
@@ -74,6 +75,9 @@ def main() -> None:
     )
 
     repository = get_cached_repository()
+    if repository is None:
+        return
+
     city_options = repository.distinct_cities()
 
     if not city_options:
