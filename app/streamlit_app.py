@@ -11,13 +11,38 @@ from config.settings import get_settings
 from core.formatter import format_recommendation_cards
 from core.orchestrator import RecommendationOrchestrator
 from data.repository import RestaurantRepository
+from data.loader import ingest
 from app.logging_config import configure_logging
 
 
 def load_repository() -> RestaurantRepository:
     repo = RestaurantRepository()
-    repo.load()
-    return repo
+    try:
+        repo.load()
+        return repo
+    except FileNotFoundError:
+        settings = get_settings()
+        # If configured to auto-refresh, attempt to download and build the cache
+        if settings.auto_refresh_cache or os.environ.get("AUTO_REFRESH_CACHE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
+            st.warning(
+                "Restaurant cache not found. Downloading dataset and building cache (this may take several minutes)..."
+            )
+            try:
+                ingest(refresh=True)
+                repo.load()
+                return repo
+            except Exception as exc:  # re-raise with a helpful message
+                st.error("Automatic dataset ingest failed. Check app logs for details.")
+                raise
+        # Otherwise, instruct the user to run ingestion manually
+        st.error(
+            "Restaurant cache not found. Run `python -m data.loader --refresh` locally or enable AUTO_REFRESH_CACHE."
+        )
+        raise
 
 
 @st.cache_resource
