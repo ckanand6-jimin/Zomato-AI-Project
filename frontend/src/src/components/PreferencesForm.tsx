@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { apiUrl } from '../api'
 
 export default function PreferencesForm() {
   const [cities, setCities] = useState<string[]>([])
@@ -9,7 +10,7 @@ export default function PreferencesForm() {
   const [minRating, setMinRating] = useState(3.5)
 
   useEffect(() => {
-    axios.get('/api/cities').then(r => setCities(r.data || [])).catch(() => setCities([]))
+    axios.get(apiUrl('/api/cities')).then(r => setCities(r.data || [])).catch(() => setCities([]))
   }, [])
 
   const onFind = async (e: React.FormEvent) => {

@@ -1,16 +1,20 @@
-# Deployment Plan: Zomato AI Recommender on Streamlit
+# Deployment Plan: Zomato AI Recommender on Render + Vercel
 
 ## Overview
-This document outlines the steps to deploy the Zomato AI Restaurant Recommender application on Streamlit (both Streamlit Cloud and self-hosted options).
+This document outlines the deployment steps for the Zomato AI Restaurant Recommender application with:
+- Backend on Render
+- Frontend on Vercel
 
 ## Prerequisites
 
 - Python 3.10+
-- Git and GitHub account (for Streamlit Cloud)
+- Git and GitHub account
 - Groq API key (for LLM recommendations)
-- Node.js 18+ (optional, for React frontend)
+- Node.js 18+ (for React frontend)
+- Render account
+- Vercel account
 
-## Option 1: Streamlit Cloud Deployment (Recommended)
+## Backend Deployment: Render
 
 ### Step 1: Prepare Repository
 1. Push the project to GitHub:
@@ -22,155 +26,93 @@ This document outlines the steps to deploy the Zomato AI Restaurant Recommender 
    git push -u origin main
    ```
 
-2. Create `.streamlit/secrets.toml` for local testing (add to `.gitignore`):
-   ```toml
-   GROQ_API_KEY = "your_groq_api_key_here"
+2. Ensure the backend entry point is correct in `app/streamlit_app.py` or `app/main.py`.
+
+3. Add any local secret files to `.gitignore`.
+
+### Step 2: Configure Render Service
+1. In Render, create a new Web Service.
+2. Connect your GitHub repository.
+3. Set the branch to `main`.
+4. Configure the service:
+   - Environment: `Python 3`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `uvicorn app.api:app --host 0.0.0.0 --port $PORT`
+
+5. Add environment variables under Render service settings:
+   - `GROQ_API_KEY` = `your_groq_api_key`
+   - `STREAMLIT_SERVER_PORT` = `{{PORT}}` (optional: Render provides `$PORT` automatically)
+
+### Step 3: Use Render Secrets
+1. In Render, open the service dashboard.
+2. Add the following Environment Variables:
+   ```text
+   GROQ_API_KEY=your_groq_api_key
+   ```
+3. If needed, add additional values for configuration.
+
+### Step 4: Deploy and Validate
+1. Trigger deployment in Render.
+2. Wait for render logs to finish.
+3. Visit the assigned Render URL to ensure the API responds successfully.
+4. Validate that recommendations work and no API key errors appear.
+
+### Render Notes
+- Render provides the `$PORT` environment variable for HTTP services.
+- For a backend API, the service must bind to `0.0.0.0`.
+- Use `render.yaml` if you want an Infrastructure as Code deployment manifest.
+
+## Frontend Deployment: Vercel
+
+### Step 1: Prepare Frontend
+1. Ensure `frontend/package.json` and `frontend/vite.config.ts` are up to date.
+2. Confirm any API base URL configuration points to the Render backend.
+3. If using environment-based API endpoints, add a `.env.production` or Vercel environment variables.
+
+### Step 2: Create Vercel Project
+1. In Vercel, click "New Project".
+2. Import your GitHub repository.
+3. Select the `frontend` directory as the root.
+4. Configure the framework preset to `Vite` or `React`.
+5. Set the build command:
+   ```bash
+   npm install
+   npm run build
+   ```
+6. Set the output directory to:
+   ```text
+   dist
    ```
 
-### Step 2: Deploy on Streamlit Cloud
-1. Visit [Streamlit Cloud](https://share.streamlit.io/)
-2. Click "New app"
-3. Connect your GitHub account and select the repository
-4. Choose branch: `main`
-5. Set app path: `app/streamlit_app.py`
-6. Click "Deploy"
+### Step 3: Configure Vercel Environment Variables
+1. In Vercel Project Settings, add the backend API URL:
+   - `VITE_API_BASE_URL` = `https://<your-render-service>.onrender.com`
+2. Add any other frontend-specific values.
 
-### Step 3: Configure Secrets in Streamlit Cloud
-1. After deployment, go to app Settings (gear icon)
-2. Select "Secrets"
-3. Add your environment variables:
-   ```
-   GROQ_API_KEY = "your_groq_api_key"
-   ```
+### Step 4: Deploy and Verify
+1. Deploy the Vercel project.
+2. Open the Vercel preview URL.
+3. Verify the frontend loads and fetches recommendations from the Render backend.
+4. Test the app end-to-end by submitting preferences and receiving results.
 
-## Option 2: Docker Deployment (Self-Hosted)
+## Recommended Setup
 
-### Step 1: Create Dockerfile
-```dockerfile
-FROM python:3.11-slim
+### Backend on Render
+- Service type: Web Service
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.api:app --host 0.0.0.0 --port $PORT`
+- Environment variables: `GROQ_API_KEY`
 
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-# Download and cache data
-RUN python -m data.loader --refresh
-
-EXPOSE 8501
-
-CMD ["streamlit", "run", "app/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
-```
-
-### Step 2: Create docker-compose.yml
-```yaml
-version: '3.8'
-
-services:
-  zomato-app:
-    build: .
-    ports:
-      - "8501:8501"
-    environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
-    volumes:
-      - ./data/cache:/app/data/cache
-    restart: unless-stopped
-```
-
-### Step 3: Build and Run
-```bash
-# Build image
-docker build -t zomato-ai-recommender .
-
-# Run container
-docker run -e GROQ_API_KEY="your_key" -p 8501:8501 zomato-ai-recommender
-
-# Or use docker-compose
-docker-compose up -d
-```
-
-## Option 3: Traditional Server Deployment (VPS/EC2)
-
-### Step 1: SSH into Server
-```bash
-ssh user@your_server_ip
-```
-
-### Step 2: Clone and Setup
-```bash
-git clone https://github.com/<YOUR_USERNAME>/zomato-ai-recommender.git
-cd zomato-ai-recommender
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### Step 3: Download Data Cache
-```bash
-python -m data.loader --refresh
-```
-
-### Step 4: Configure Environment Variables
-```bash
-export GROQ_API_KEY="your_groq_api_key"
-```
-
-### Step 5: Run Streamlit with Systemd (Linux)
-
-Create `/etc/systemd/system/zomato-app.service`:
-```ini
-[Unit]
-Description=Zomato AI Recommender
-After=network.target
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/zomato-ai-recommender
-Environment="PATH=/home/ubuntu/zomato-ai-recommender/venv/bin"
-Environment="GROQ_API_KEY=your_groq_api_key"
-ExecStart=/home/ubuntu/zomato-ai-recommender/venv/bin/streamlit run app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start the service:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable zomato-app
-sudo systemctl start zomato-app
-```
-
-### Step 6: Reverse Proxy with Nginx
-```nginx
-server {
-    listen 80;
-    server_name your_domain.com;
-
-    location / {
-        proxy_pass http://localhost:8501;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # WebSocket support
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
+### Frontend on Vercel
+- Root directory: `frontend`
+- Build command: `npm install && npm run build`
+- Output directory: `dist`
+- Env var: `VITE_API_BASE_URL`
 
 ## Configuration
 
 ### Streamlit Config File
-Create `.streamlit/config.toml`:
+Create `.streamlit/config.toml` for local testing:
 ```toml
 [theme]
 primaryColor = "#FF6334"
@@ -182,22 +124,14 @@ textColor = "#262730"
 showErrorDetails = true
 
 [server]
-port = 8501
 enableXsrfProtection = true
 ```
 
-### Performance Tuning
+### Local Secrets
+For local development, use `.env` or `.streamlit/secrets.toml` and add it to `.gitignore`:
 ```toml
-[client]
-toolbarMode = "minimal"
-
-[logger]
-level = "warning"
-
-[server]
-maxUploadSize = 200
-enableCORS = true
-```
+GROQ_API_KEY = "your_groq_api_key"
+``` 
 
 ## Data Management
 
@@ -208,56 +142,83 @@ python -m data.loader --refresh
 ```
 
 This creates:
-- `data/cache/restaurants.parquet` (~51k restaurants)
-- `data/cache/cache_metadata.json` (stats and thresholds)
+- `data/cache/restaurants.parquet`
+- `data/cache/cache_metadata.json`
 
 ### Cache Location
 - Local: `data/cache/`
-- Docker: Mount as volume to persist across restarts
-- Cloud: Auto-downloads on first run (slower startup)
+- Render: data should be built or refreshed during deploy, but cache persistence is not guaranteed between deploys
+- Use a persistent storage solution or re-run `python -m data.loader --refresh` as needed
 
 ## Monitoring and Logging
 
 ### View Logs
 ```bash
-# Systemd
-sudo journalctl -u zomato-app -f
+# Render
+View logs from the Render dashboard
 
-# Docker
-docker logs -f container_id
-
-# Streamlit Cloud
-View in app Settings → Logs
+# Vercel
+View build and runtime logs from the Vercel dashboard
 ```
 
 ### Health Checks
 ```bash
-curl http://localhost:8501
+curl https://<your-render-service>.onrender.com
 ```
 
 ## Scaling Considerations
 
-- **Single Instance**: Suitable for < 100 concurrent users
-- **Load Balancer**: Use Nginx/HAProxy for multiple instances
-- **Database Caching**: Cache recommendations in Redis for frequent queries
-- **CDN**: Serve static assets via CloudFront or Netlify
+- **Render**: auto scales with the selected plan
+- **Vercel**: CDN-backed frontend for fast global delivery
+- **Backend caching**: use Redis or persistent storage if API response latency is a concern
 
-## Frontend Integration
+## Frontend Integration Notes
 
-If deploying the React frontend (`frontend/`):
-
-1. Build React app:
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-   ```
-
-2. Serve static files from a CDN or separate server
-3. Configure API proxy to Streamlit backend at `/api`
-4. Deploy frontend to Vercel, Netlify, or AWS S3 + CloudFront
+- Set `VITE_API_BASE_URL` to the Render backend URL in Vercel.
+- Use relative paths in the React app only if the frontend and backend are proxied together.
+- Confirm CORS is handled by the backend if the frontend and backend domains differ.
 
 ## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Groq API key not found | Set `GROQ_API_KEY` in Render environment variables |
+| Backend URL incorrect | Update `VITE_API_BASE_URL` in Vercel env vars |
+| Build fails | Check `frontend/package.json` and Vite config for missing paths |
+| Cache file missing | Run `python -m data.loader --refresh` locally or regenerate during deployment |
+
+## Rollback Plan
+
+1. Keep previous commit or branch in git: `git tag v1.0.0`
+2. Revert to the prior version: `git checkout v1.0.0`
+3. Redeploy on Render and Vercel
+
+## Security Checklist
+
+- [ ] Groq API key stored in Render environment variables, not code
+- [ ] Frontend secrets stored in Vercel environment variables
+- [ ] SSL/TLS enabled on Render and Vercel endpoints
+- [ ] CORS properly configured for cross-origin requests
+
+## Post-Deployment Verification
+
+1. Run demo scenarios:
+   ```bash
+   python scripts/demo_scenarios.py
+   ```
+2. Test the backend locally:
+   ```bash
+   python -m app.main recommend --location Bangalore --budget low
+   ```
+3. Verify frontend loads at the Vercel URL.
+4. Confirm end-to-end: submit preferences → receive recommendations.
+
+## Support and Monitoring
+
+- Monitor Render logs for backend errors
+- Monitor Vercel logs for frontend build and runtime issues
+- Refresh the data cache periodically if input data changes
+
 
 | Issue | Solution |
 |-------|----------|

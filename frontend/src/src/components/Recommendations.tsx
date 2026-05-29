@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
+import { apiUrl } from '../api'
 
 type Rec = { restaurant_id: string; rank: number; explanation: string }
 
@@ -15,7 +16,7 @@ export default function Recommendations(){
       setLoading(true)
       try{
         const prefs = JSON.parse(raw)
-        const r = await axios.post('/api/recommend', prefs)
+        const r = await axios.post(apiUrl('/api/recommend'), prefs)
         setRecs(r.data.recommendations || [])
         setSummary(r.data.summary || '')
       }catch(e){
