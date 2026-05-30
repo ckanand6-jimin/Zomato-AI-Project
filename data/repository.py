@@ -41,42 +41,73 @@ class RestaurantRepository:
                 )
 
         start = time.perf_counter()
-        df = pd.read_parquet(path)
+        logger.info("Loading restaurants from parquet: %s", path)
+        try:
+            df = pd.read_parquet(path)
+            logger.info("Successfully read parquet - shape: %s, columns: %s", df.shape, list(df.columns))
+        except Exception as e:
+            logger.exception("CRITICAL: Failed to read parquet file at %s: %s", path, type(e).__name__)
+            raise
+
+        logger.info("Converting dataframe to records (size: %s rows)", len(df))
+        try:
+            records = df.to_dict(orient="records")
+            logger.info("Successfully converted %s records to dict", len(records))
+        except Exception as e:
+            logger.exception("CRITICAL: Failed to convert dataframe to dict: %s", type(e).__name__)
+            raise
+
         restaurants: list[Restaurant] = []
-        for row in df.to_dict(orient="records"):
-            raw = row.get("raw")
-            if isinstance(raw, str):
-                try:
-                    raw = json.loads(raw)
-                except json.JSONDecodeError:
+        creation_errors = 0
+        for idx, row in enumerate(records):
+            try:
+                raw = row.get("raw")
+                if isinstance(raw, str):
+                    try:
+                        raw = json.loads(raw)
+                    except json.JSONDecodeError:
+                        raw = {}
+                elif raw is None or (isinstance(raw, float) and pd.isna(raw)):
                     raw = {}
-            elif raw is None or (isinstance(raw, float) and pd.isna(raw)):
-                raw = {}
 
-            tier_raw = row.get("budget_tier")
-            if tier_raw is None or (isinstance(tier_raw, float) and pd.isna(tier_raw)):
-                budget_tier = None
-            else:
-                budget_tier = str(tier_raw)
+                tier_raw = row.get("budget_tier")
+                if tier_raw is None or (isinstance(tier_raw, float) and pd.isna(tier_raw)):
+                    budget_tier = None
+                else:
+                    budget_tier = str(tier_raw)
 
-            restaurants.append(
-                Restaurant(
-                    id=str(row["id"]),
-                    name=str(row["name"]),
-                    location=str(row["location"]),
-                    city=str(row["city"]),
-                    cuisine=str(row["cuisine"]),
-                    rating=float(row["rating"]),
-                    cost_for_two=(
-                        int(row["cost_for_two"])
-                        if row.get("cost_for_two") is not None
-                        and not pd.isna(row["cost_for_two"])
-                        else None
-                    ),
-                    budget_tier=budget_tier,
-                    raw=raw if isinstance(raw, dict) else {},
+                restaurants.append(
+                    Restaurant(
+                        id=str(row["id"]),
+                        name=str(row["name"]),
+                        location=str(row["location"]),
+                        city=str(row["city"]),
+                        cuisine=str(row["cuisine"]),
+                        rating=float(row["rating"]),
+                        cost_for_two=(
+                            int(row["cost_for_two"])
+                            if row.get("cost_for_two") is not None
+                            and not pd.isna(row["cost_for_two"])
+                            else None
+                        ),
+                        budget_tier=budget_tier,
+                        raw=raw if isinstance(raw, dict) else {},
+                    )
                 )
-            )
+            except Exception as e:
+                creation_errors += 1
+                if creation_errors <= 3:  # Log first 3 errors only
+                    logger.error(
+                        "CRITICAL: Failed to create Restaurant at index %s: %s | Row keys: %s | Error: %s",
+                        idx, type(e).__name__, list(row.keys()) if isinstance(row, dict) else "N/A", str(e)
+                    )
+                if creation_errors > 10:  # Give up after 10 consecutive errors
+                    logger.critical("Too many Restaurant creation errors (%d), aborting load", creation_errors)
+                    raise
+
+        if creation_errors > 0:
+            logger.warning("Restaurant creation encountered %d errors (processed %d/%d rows)", 
+                          creation_errors, len(restaurants), len(records))
 
         self._restaurants = restaurants
         self._by_id = {r.id: r for r in restaurants}
@@ -109,8 +140,14 @@ class RestaurantRepository:
 
     def distinct_cities(self) -> list[str]:
         self.ensure_loaded()
-        cities = sorted({r.city for r in self._restaurants if r.city})
-        return cities
+        logger.info("Extracting distinct cities from %s restaurants", len(self._restaurants))
+        try:
+            cities = sorted({r.city for r in self._restaurants if r.city})
+            logger.info("Found %d distinct cities: %s", len(cities), cities[:5] if len(cities) > 5 else cities)
+            return cities
+        except Exception as e:
+            logger.exception("CRITICAL: Failed to extract distinct cities: %s", type(e).__name__)
+            raise
 
     def filter_by_city(self, city: str, *, case_insensitive: bool = True) -> list[Restaurant]:
         self.ensure_loaded()

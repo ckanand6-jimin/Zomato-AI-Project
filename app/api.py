@@ -47,14 +47,22 @@ _repository: RestaurantRepository | None = None
 
 
 def load_repository() -> RestaurantRepository:
+    logger.info("Initializing RestaurantRepository from settings: %s", settings.restaurants_parquet)
     repository = RestaurantRepository(settings)
     try:
+        logger.info("Calling repository.load()...")
         repository.load()
-    except FileNotFoundError:
+        logger.info("Repository loaded successfully")
+    except FileNotFoundError as e:
+        logger.warning("Cache file not found: %s", e)
         if os.environ.get("AUTO_REFRESH_CACHE", "").lower() in ("1", "true", "yes") or settings.auto_refresh_cache:
+            logger.info("AUTO_REFRESH_CACHE enabled, attempting refresh...")
             repository.load(force_refresh=True)
         else:
             raise
+    except Exception as e:
+        logger.exception("CRITICAL: Failed to load repository - %s: %s", type(e).__name__, str(e))
+        raise
 
     return repository
 
@@ -73,7 +81,17 @@ def health() -> dict[str, str]:
 
 @app.get("/api/cities")
 def list_cities() -> list[str]:
-    return get_repository().distinct_cities()
+    try:
+        logger.info("GET /api/cities - fetching distinct cities")
+        cities = get_repository().distinct_cities()
+        logger.info("GET /api/cities - returning %d cities", len(cities))
+        return cities
+    except Exception as e:
+        logger.exception("CRITICAL: /api/cities failed - %s: %s", type(e).__name__, str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch cities: {type(e).__name__}"
+        )
 
 
 @app.post("/api/recommend", response_model=RecommendationResponse)
