@@ -1,0 +1,19 @@
+{
+  "stats": {
+    "input_rows": 51717,
+    "output_rows": 26276,
+    "dropped_missing_name": 0,
+    "dropped_missing_location": 0,
+    "dropped_missing_rating": 2277,
+    "dropped_invalid_rating": 7775,
+    "dropped_duplicates": 15389,
+    "total_dropped": 25441,
+    "retention_percent": 50.81
+  },
+  "preprocess": {
+    "budget_low_max": 350,
+    "budget_medium_max": 600,
+    "budget_calibration": "percentile_33_66"
+  },
+  "row_count": 26276
+}
