@@ -27,10 +27,17 @@ export default function PreferencesForm() {
   }
 
   const resetForm = () => {
+    // Reset form fields
     setLocation(cities[0] ?? '')
     setBudget('low')
     setCuisine('')
     setMinRating(3.5)
+    
+    // Clear localStorage
+    localStorage.removeItem('zomato_prefs')
+    
+    // Dispatch reset event to clear recommendations
+    window.dispatchEvent(new Event('zomato_reset'))
   }
 
   return (

@@ -43,9 +43,23 @@ export default function Recommendations(){
         setError('Unable to fetch recommendations. Please check your preferences.')
       }finally{setLoading(false)}
     }
+
+    const handleReset = () => {
+      setRecs([])
+      setSummary('')
+      setFallbackUsed(false)
+      setModelVersion(null)
+      setError('')
+      setLoading(false)
+    }
+
     window.addEventListener('zomato_prefs_changed', fetch)
+    window.addEventListener('zomato_reset', handleReset)
     fetch()
-    return ()=> window.removeEventListener('zomato_prefs_changed', fetch)
+    return ()=> {
+      window.removeEventListener('zomato_prefs_changed', fetch)
+      window.removeEventListener('zomato_reset', handleReset)
+    }
   }, [])
 
   if(loading) return (
