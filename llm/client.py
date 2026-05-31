@@ -31,6 +31,16 @@ class LLMClient:
             list(candidates),
             self.settings.top_n_recommendations,
         )
+        # Temporary debug logging: do not log full prompt content in production
+        try:
+            logger.info(
+                "Built prompt messages: provider=%s, candidates=%d, top_n=%d",
+                self.settings.llm_provider,
+                len(candidates),
+                self.settings.top_n_recommendations,
+            )
+        except Exception:
+            logger.debug("Could not log prompt summary")
 
         while attempt < 2:
             try:
@@ -65,7 +75,7 @@ class LLMClient:
                 "The groq package is required for Groq LLM calls. "
                 "Install it with `pip install groq`."
             ) from exc
-
+        # Load API key from settings or environment and log presence (masked)
         api_key = self.settings.groq_api_key or os.getenv("GROQ_API_KEY")
         if not api_key:
             raise ValueError(
@@ -73,14 +83,29 @@ class LLMClient:
                 "Set GROQ_API_KEY in the environment or groq_api_key in settings."
             )
 
-        client = Groq(api_key=api_key)
-        response = client.chat.completions.create(
-            model=self.settings.llm_model,
-            messages=messages,
-            temperature=self.settings.llm_temperature,
-            max_tokens=self.settings.llm_max_tokens,
-            timeout=self.settings.llm_timeout_seconds,
-        )
+        try:
+            masked = api_key[:4] + "..." + api_key[-4:] if len(api_key) > 8 else "<present>"
+        except Exception:
+            masked = "<present>"
+        logger.info("Groq API key present: %s", masked)
+
+        # Initialize client and call API
+        try:
+            client = Groq(api_key=api_key)
+            logger.info("Initialized Groq client for model=%s", self.settings.llm_model)
+            response = client.chat.completions.create(
+                model=self.settings.llm_model,
+                messages=messages,
+                temperature=self.settings.llm_temperature,
+                max_tokens=self.settings.llm_max_tokens,
+                timeout=self.settings.llm_timeout_seconds,
+            )
+            logger.info(
+                "Groq response received: choices=%s", getattr(response, "choices", None) and len(response.choices)
+            )
+        except Exception as exc:
+            logger.exception("Groq API call failed")
+            raise
 
         if not response.choices:
             raise ValueError("Groq returned no choices.")
@@ -89,4 +114,6 @@ class LLMClient:
         if message is None or not getattr(message, "content", None):
             raise ValueError("Groq returned an empty message content.")
 
-        return str(message.content)
+        content = str(message.content)
+        logger.info("Groq message content length=%d", len(content) if content is not None else 0)
+        return content

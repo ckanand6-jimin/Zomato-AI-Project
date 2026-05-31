@@ -62,10 +62,9 @@ class RecommendationOrchestrator:
             )
             fallback_used = False
         except Exception as exc:
-            # Provide more context in logs for debugging
-            logger.warning(
-                "LLM request or parsing failed; falling back to deterministic recommendations. error=%s",
-                exc,
+            # Provide more context in logs for debugging (include traceback)
+            logger.exception(
+                "LLM request or parsing failed; falling back to deterministic recommendations."
             )
             if self.settings.llm_fallback_on_error:
                 response = fallback_recommendation_response(

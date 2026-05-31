@@ -17,22 +17,26 @@ def parse_llm_response(
 ) -> RecommendationResponse:
     """Parse and validate LLM JSON output against a candidate restaurant list."""
     try:
+        logger.info("Parsing LLM response (len=%d)", len(raw_response) if raw_response is not None else 0)
         raw_response = raw_response.strip()
         raw_response = re.sub(r'^```(?:json)?\s*', '', raw_response)
         raw_response = re.sub(r'\s*```$', '', raw_response)
 
         parsed = json.loads(raw_response)
-
-        print(parsed)
+        logger.info("LLM response JSON parsed successfully")
+        logger.debug("Parsed keys: %s", list(parsed.keys()) if isinstance(parsed, dict) else type(parsed))
 
     except json.JSONDecodeError as exc:
+        logger.exception("LLM response JSON decoding failed")
         raise ValueError("LLM response is not valid JSON") from exc
 
     if not isinstance(parsed, dict):
+        logger.error("LLM response parsed to non-dict: %s", type(parsed))
         raise ValueError("LLM response must be a JSON object.")
 
     recommendations = parsed.get("recommendations")
     if not isinstance(recommendations, list):
+        logger.error("LLM response missing recommendations list or wrong type: %s", type(recommendations))
         raise ValueError("LLM response must contain a `recommendations` list.")
 
     candidate_ids = {restaurant.id for restaurant in candidates}
@@ -41,12 +45,14 @@ def parse_llm_response(
 
     for item in recommendations:
         if not isinstance(item, dict):
+            logger.error("Invalid recommendation item type: %s", type(item))
             raise ValueError("Each recommendation item must be a JSON object.")
 
         restaurant_id = item.get("restaurant_id")
         if not restaurant_id or not isinstance(restaurant_id, str):
             raise ValueError("Each recommendation must include a string `restaurant_id`.")
         if restaurant_id not in candidate_ids:
+            logger.error("Unknown restaurant_id in LLM response: %s", restaurant_id)
             raise ValueError(
                 f"Unknown restaurant_id in LLM response: {restaurant_id}. "
                 "Recommendations must come from the provided candidate list."
@@ -64,6 +70,7 @@ def parse_llm_response(
                 f"Recommendation rank must be between 1 and {max_recommendations}."
             )
         if rank in seen_ranks:
+            logger.error("Duplicate recommendation rank found: %s", rank)
             raise ValueError(f"Duplicate recommendation rank found: {rank}.")
         seen_ranks.add(rank)
 
@@ -80,6 +87,7 @@ def parse_llm_response(
         )
 
     if not validated_recommendations:
+        logger.error("No valid recommendations extracted from LLM response")
         raise ValueError("LLM response contains no valid recommendations.")
 
     validated_recommendations.sort(key=lambda recommendation: recommendation.rank)
@@ -92,6 +100,7 @@ def parse_llm_response(
 
     model_version = parsed.get("model_version")
     if model_version is not None and not isinstance(model_version, str):
+        logger.error("Invalid model_version type: %s", type(model_version))
         raise ValueError("Optional `model_version` must be a string.")
 
     return RecommendationResponse(
