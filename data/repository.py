@@ -78,7 +78,7 @@ class RestaurantRepository:
 
                 restaurants.append(
                     Restaurant(
-                        id=str(row["id"]),
+                       id=f"{row['name']}_{row['location']}",
                         name=str(row["name"]),
                         location=str(row["location"]),
                         city=str(row["city"]),
