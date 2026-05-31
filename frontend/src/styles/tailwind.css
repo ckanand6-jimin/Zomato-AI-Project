@@ -3,13 +3,42 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
+  min-height: 100vh;
 }
 
 body {
   min-height: 100%;
-  background: #f8fafc;
+  background: transparent;
+  color: #f1f5f9;
+}
+
+#root {
+  height: 100%;
+  background: transparent;
+}
+
+/* Glassmorphism base */
+.glass {
+  @apply bg-glass backdrop-blur-xl border border-glass;
+}
+
+.glass-light {
+  @apply bg-glass-light backdrop-blur-xl border border-glass-light;
+}
+
+/* Glow effects */
+.glow {
+  @apply shadow-glow;
+}
+
+.glow-lg {
+  @apply shadow-glow-lg;
 }
 
 .material-symbols-outlined {

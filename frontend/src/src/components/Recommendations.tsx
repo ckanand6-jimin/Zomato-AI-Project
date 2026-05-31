@@ -37,7 +37,7 @@ export default function Recommendations(){
         setSummary('')
         setFallbackUsed(false)
         setModelVersion(null)
-        setError('Unable to fetch recommendations. Please try again.')
+        setError('Unable to fetch recommendations. Please check your preferences.')
       }finally{setLoading(false)}
     }
     window.addEventListener('zomato_prefs_changed', fetch)
@@ -46,56 +46,91 @@ export default function Recommendations(){
   }, [])
 
   if(loading) return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/40">
-      <p className="text-lg font-medium text-slate-900">Finding the best options for you...</p>
-      <p className="mt-3 text-slate-600">This usually takes just a second.</p>
+    <div className="glass rounded-2xl glow-sm p-8 border border-glass">
+      <div className="space-y-4">
+        <div className="h-8 w-40 rounded bg-slate-700/30 animate-pulse" />
+        <div className="h-4 w-full rounded bg-slate-700/20 animate-pulse" />
+        <div className="h-4 w-3/4 rounded bg-slate-700/20 animate-pulse" />
+      </div>
     </div>
   )
 
   if(error) return (
-    <div className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
-      {error}
+    <div className="glass rounded-2xl glow-sm p-8 border border-red-500/30 bg-red-500/10">
+      <p className="text-red-300 font-semibold">{error}</p>
     </div>
   )
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/40">
+      {/* Header Card */}
+      <div className="glass rounded-2xl glow-sm p-6 border border-glass">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-rose-600">Recommendations</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Your best restaurant picks</h2>
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-400">AI Results</p>
+            <h2 className="mt-2 text-2xl font-bold text-slate-100">Your picks</h2>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {fallbackUsed && (
-              <span className="rounded-full bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Fallback used</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/20 border border-orange-500/40 px-3 py-1.5 text-xs font-semibold text-orange-300">
+                <span className="relative inline-block h-1.5 w-1.5 rounded-full bg-orange-400" />
+                Fallback
+              </span>
             )}
             {modelVersion && (
-              <span className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">Model: {modelVersion}</span>
+              <span className="rounded-full bg-slate-700/40 border border-slate-600/50 px-3 py-1.5 text-xs font-medium text-slate-300">
+                {modelVersion}
+              </span>
             )}
           </div>
         </div>
-        {summary && <p className="mt-4 text-slate-600">{summary}</p>}
+        {summary && <p className="mt-4 text-sm text-slate-300 leading-relaxed">{summary}</p>}
       </div>
 
+      {/* Recommendations Grid */}
       {recs.length === 0 ? (
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm text-slate-700">
-          <p className="font-semibold">No recommendations yet.</p>
-          <p className="mt-2">Choose your preferences to discover the best restaurants for your selected city.</p>
+        <div className="glass rounded-2xl glow-sm p-12 border border-glass text-center">
+          <p className="text-lg font-semibold text-slate-100">No recommendations yet</p>
+          <p className="mt-2 text-slate-400">Choose your preferences to discover restaurants.</p>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2">
-          {recs.map(r => (
-            <article key={r.restaurant_id} className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-              <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {recs.map((r, idx) => (
+            <article
+              key={r.restaurant_id}
+              className="glass rounded-2xl glow-sm p-6 border border-glass group transition hover:shadow-glow-lg hover:border-violet-400/50 hover:-translate-y-1 cursor-default"
+              style={{
+                animationDelay: `${idx * 50}ms`,
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <span className="text-xs uppercase tracking-[0.32em] text-slate-500">Rank</span>
-                  <p className="mt-2 text-3xl font-semibold text-slate-900">#{r.rank}</p>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-violet-400">Rank</span>
+                  <p className="mt-1 text-3xl font-bold text-transparent bg-gradient-to-r from-violet-400 to-violet-300 bg-clip-text">
+                    #{r.rank}
+                  </p>
                 </div>
-                <div className="rounded-3xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white">AI pick</div>
+                {/* AI Score Badge */}
+                <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-gradient-to-br from-violet-600 to-violet-500 shadow-glow text-white font-bold">
+                  {(100 - r.rank * 10).toFixed(0)}
+                </div>
               </div>
-              <p className="text-lg font-semibold text-slate-900">{r.restaurant_id}</p>
-              <p className="mt-4 text-slate-600 leading-7">{r.explanation}</p>
+
+              {/* Restaurant Name */}
+              <p className="text-lg font-semibold text-slate-100 mb-3 line-clamp-2">
+                {r.restaurant_id}
+              </p>
+
+              {/* Explanation */}
+              <p className="text-sm text-slate-300 leading-relaxed line-clamp-3">
+                {r.explanation}
+              </p>
+
+              {/* Hover indicator */}
+              <div className="mt-4 pt-4 border-t border-slate-700/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-xs text-violet-400 font-semibold">✓ AI Ranked</p>
+              </div>
             </article>
           ))}
         </div>

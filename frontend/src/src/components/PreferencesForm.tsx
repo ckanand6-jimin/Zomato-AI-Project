@@ -34,33 +34,40 @@ export default function PreferencesForm() {
   }
 
   return (
-    <form className="space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50" onSubmit={onFind}>
-      <div className="space-y-1">
-        <p className="text-sm font-semibold text-slate-900">Tell us your taste</p>
-        <p className="text-sm text-slate-500">Choose a city and the filters that matter most.</p>
+    <form className="glass rounded-2xl glow-sm p-6 space-y-5" onSubmit={onFind}>
+      {/* Header */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-violet-400">Control Panel</p>
+        <h2 className="mt-2 text-lg font-semibold text-slate-100">Your preferences</h2>
       </div>
 
-      <div className="space-y-3">
-        <label className="block text-sm font-medium text-slate-700">Location</label>
+      {/* Location */}
+      <div className="space-y-2">
+        <label className="block text-xs font-medium text-slate-300 uppercase tracking-wide">Location</label>
         <select
-          className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+          className="w-full rounded-lg bg-slate-950/60 border border-glass px-4 py-2.5 text-slate-100 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/30"
           value={location}
           onChange={e => setLocation(e.target.value)}
         >
-          {cities.length === 0 ? <option value="">Loading cities...</option> : null}
+          {cities.length === 0 ? <option value="">Loading...</option> : null}
           {cities.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-sm font-medium text-slate-700">Budget tier</p>
-        <div className="grid grid-cols-3 gap-3">
-          {['low', 'medium', 'high'].map(option => (
+      {/* Budget */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-slate-300 uppercase tracking-wide">Budget</p>
+        <div className="grid grid-cols-3 gap-2">
+          {(['low', 'medium', 'high'] as const).map(option => (
             <button
               key={option}
               type="button"
-              onClick={() => setBudget(option as 'low'|'medium'|'high')}
-              className={`rounded-3xl border px-4 py-3 text-sm font-semibold transition ${budget === option ? 'border-rose-600 bg-rose-50 text-rose-700' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}`}
+              onClick={() => setBudget(option)}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                budget === option
+                  ? 'border border-violet-500 bg-violet-500/20 text-violet-300 shadow-glow-sm'
+                  : 'border border-slate-700/50 bg-slate-950/60 text-slate-300 hover:border-violet-400/50'
+              }`}
             >
               {option.charAt(0).toUpperCase() + option.slice(1)}
             </button>
@@ -68,20 +75,24 @@ export default function PreferencesForm() {
         </div>
       </div>
 
-      <div className="space-y-3">
-        <label className="block text-sm font-medium text-slate-700">Cuisine preferences</label>
+      {/* Cuisine */}
+      <div className="space-y-2">
+        <label className="block text-xs font-medium text-slate-300 uppercase tracking-wide">Cuisine</label>
         <input
-          className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+          className="w-full rounded-lg bg-slate-950/60 border border-glass px-4 py-2.5 text-slate-100 text-sm placeholder-slate-500 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/30"
           value={cuisine}
           onChange={e => setCuisine(e.target.value)}
-          placeholder="e.g. Indian, Chinese, Italian"
+          placeholder="e.g. Indian, Chinese"
         />
       </div>
 
+      {/* Rating */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between text-sm font-medium text-slate-700">
-          <span>Minimum rating</span>
-          <span className="text-slate-500">{minRating.toFixed(1)}</span>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-slate-300 uppercase tracking-wide">Min. Rating</label>
+          <span className="inline-flex rounded-full bg-violet-500/20 border border-violet-500/40 px-3 py-1 text-xs font-semibold text-violet-300">
+            {minRating.toFixed(1)} ★
+          </span>
         </div>
         <input
           type="range"
@@ -90,23 +101,24 @@ export default function PreferencesForm() {
           step={0.1}
           value={minRating}
           onChange={e => setMinRating(parseFloat(e.target.value))}
-          className="w-full accent-rose-500"
+          className="w-full accent-violet-500"
         />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+      {/* Actions */}
+      <div className="flex flex-col gap-3 pt-2">
+        <button
+          type="submit"
+          className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:shadow-glow-lg hover:-translate-y-0.5 active:translate-y-0"
+        >
+          Find Restaurants
+        </button>
         <button
           type="button"
           onClick={resetForm}
-          className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+          className="w-full rounded-lg border border-slate-700/50 bg-slate-950/40 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-violet-500/30 hover:bg-violet-500/10"
         >
           Reset
-        </button>
-        <button
-          type="submit"
-          className="rounded-full bg-rose-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-200/70 transition hover:bg-rose-700"
-        >
-          Find Restaurants
         </button>
       </div>
     </form>
